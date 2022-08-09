@@ -15,7 +15,7 @@ type OrderLine struct {
 
 func NewOrderLine(id int,unitPrice float64,quantity int,item string) (*OrderLine,error){
 	if(unitPrice<0){
-		return nil, errors.New("age should be greater than 0.")
+		return nil, errors.New("Unit Price should be greater than 0.")
 	}
 	if(quantity<0){
 		return nil, errors.New("quantity should be greater than 0.")
