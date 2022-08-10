@@ -7,7 +7,7 @@ import (
 
 const (
 	// radius of the earth in kms
-	earthRaidusKm = 6371
+	earthRadKm = 6371
 )
 
 type MapCoord struct {
@@ -15,15 +15,15 @@ type MapCoord struct {
 	Lon float64
 }
 
-func degreesToRadians(d float64) float64 {
+func degToRad(d float64) float64 {
 	return d * math.Pi / 180
 }
 
-func Distance(p MapCoord, q MapCoord) (km float64) {
-	lat1 := degreesToRadians(p.Lat)
-	lon1 := degreesToRadians(p.Lon)
-	lat2 := degreesToRadians(q.Lat)
-	lon2 := degreesToRadians(q.Lon)
+func Distance(p MapCoord, q MapCoord) float64 {
+	lat1 := degToRad(p.Lat)
+	lon1 := degToRad(p.Lon)
+	lat2 := degToRad(q.Lat)
+	lon2 := degToRad(q.Lon)
 
 	diffLat := lat2 - lat1
 	diffLon := lon2 - lon1
@@ -33,13 +33,7 @@ func Distance(p MapCoord, q MapCoord) (km float64) {
 
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 
-	km = c * earthRaidusKm
+	km := c * earthRadKm
 	fmt.Println(km)
 	return km
-}
-
-func main() {
-
-	Distance(MapCoord{Lat: 37.983972, Lon: 23.727806}, MapCoord{Lat: 52.366667, Lon: 4.9})
-
 }
