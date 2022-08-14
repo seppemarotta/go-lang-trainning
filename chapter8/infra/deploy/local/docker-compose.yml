@@ -1,0 +1,15 @@
+mysql:
+  image: mysql
+  ports:
+    - "3306:3306"
+  restart: always
+  volumes:
+    - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    - ~/apps/mysql:/var/lib/mysql1
+  #command: --init-file /init.sql
+  environment:
+    MYSQL_ROOT_PASSWORD: root
+    MYSQL_USER: test
+    MYSQL_PASSWORD: test
+    MYSQL_ROOT_HOST: '%'
+    TIMEZONE: UTC
