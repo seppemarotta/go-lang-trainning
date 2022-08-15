@@ -5,11 +5,10 @@ import (
 	"chapter8/internal/repository"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/mux"
+	"strconv"
 )
 
 type App struct {
@@ -33,38 +32,59 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 func ReadEmployee(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["ID"]
-	//e := AppInstance.Repository.Get(id)
+	parsedId, err := strconv.Atoi(id)
+	if err != nil {
+		panic(err)
+	}
+	e := AppInstance.Repository.Get(parsedId)
 	fmt.Fprintf(w, "You've requested the employee: %s.\n", id)
+	json.NewEncoder(w).Encode(e)
 }
 
-func ReadEmployeeByPosition(w http.ResponseWriter, r *http.Request) {
+func ReadEmployeeByPos(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["ID"]
-
+	parsedId, err := strconv.Atoi(id)
+	if err != nil {
+		panic(err)
+	}
+	e := AppInstance.Repository.EmployeeByPos(parsedId)
 	fmt.Fprintf(w, "You've requested the employee: %s.\n", id)
+	json.NewEncoder(w).Encode(e)
 }
 
 func CreateEmployee(w http.ResponseWriter, r *http.Request) {
-
 	fmt.Println(w, "You've requested the creation of a new employee.")
 	var e employee.Employee
-	reqBody, err := ioutil.ReadAll(r.Body)
+
+	err := json.NewDecoder(r.Body).Decode(&e)
 	if err != nil {
-		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-	json.Unmarshal(reqBody, &e)
-	fmt.Println("fullname")
-
-	fmt.Println(e.FullName)
-	//AppInstance.Repository.Insert(e.FullName, int(e.Position), e.Salary, e.Joined, e.OnProbation)
-
-	//w.WriteHeader(http.StatusCreated)
-	//json.NewEncoder(w).Encode(e)
+	AppInstance.Repository.Insert(e.FullName, int(e.Position), e.Salary, e.Joined, e.OnProbation)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(e)
 }
 
 func UpdateEmployee(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["ID"]
+	parsedId, err := strconv.Atoi(id)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(w, "You've requested the update of a new employee.")
+	var e employee.Employee
+
+	err = json.NewDecoder(r.Body).Decode(&e)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	AppInstance.Repository.Update(parsedId, e.FullName, int(e.Position), e.Salary, e.Joined, e.OnProbation)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(e)
 	fmt.Fprintf(w, "You've requested the employee: %s.\n", id)
 }
 
@@ -74,7 +94,7 @@ func Initialize() {
 	AppInstance.Router.HandleFunc("/", helloWorldHandler)
 	AppInstance.Router.HandleFunc("/employee/create", CreateEmployee).Methods("POST")
 	AppInstance.Router.HandleFunc("/employee/{ID}", ReadEmployee).Methods("GET")
-	AppInstance.Router.HandleFunc("/employee/byposition/{ID}", ReadEmployee).Methods("GET")
+	AppInstance.Router.HandleFunc("/employee/byposition/{ID}", ReadEmployeeByPos).Methods("GET")
 	AppInstance.Router.HandleFunc("/employee/{ID}", UpdateEmployee).Methods("PUT")
 }
 

@@ -4,6 +4,7 @@ import (
 	"chapter8/internal/db"
 	e "chapter8/internal/employee"
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -19,7 +20,7 @@ func InitRepo() *MySqlRepository {
 }
 
 func (repository *MySqlRepository) Get(ID int) e.Employee {
-	query, err := repository.db.Prepare("Select * from employees where id = ?")
+	query, err := repository.db.Prepare("SELECT * FROM employees WHERE id = ?")
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -31,7 +32,7 @@ func (repository *MySqlRepository) Get(ID int) e.Employee {
 	return employee
 }
 
-func (repository *MySqlRepository) Insert(fullName string, pos int, salary float64, joined time.Time, probation bool) {
+func (repository *MySqlRepository) Insert(fullName string, pos int, salary float64, joined time.Time, probation bool) error {
 	sqlStatement := `
 	INSERT INTO employees ( FullName, Position, Salary, Joined, OnProbation )
         VALUES (?, ?, ?, ?, ?)`
@@ -40,14 +41,16 @@ func (repository *MySqlRepository) Insert(fullName string, pos int, salary float
 		log.Fatal("Error")
 		log.Fatal(err.Error())
 		panic(err)
+		return err
 	}
+	return nil
 }
 
 func (repository *MySqlRepository) Update(ID int, fullName string, pos int, salary float64, joined time.Time, probation bool) {
 	sqlStatement := `
 	UPDATE employees set FullName = ?, Position = ?, Salary = ?, Joined = ?, OnProbation = ? where ID = ?
     `
-	_, err := repository.db.Exec(sqlStatement, ID, fullName, pos, salary, joined, probation)
+	_, err := repository.db.Exec(sqlStatement, fullName, pos, salary, joined, probation, ID)
 	if err != nil { // scan will release the connection
 		log.Fatal("Error")
 		log.Fatal(err.Error())
@@ -55,10 +58,11 @@ func (repository *MySqlRepository) Update(ID int, fullName string, pos int, sala
 	}
 }
 
-func (repository *MySqlRepository) EmployeeByPos(pos int) {
+func (repository *MySqlRepository) EmployeeByPos(pos int) (employees []e.Employee) {
 	sqlStatement := `
 	SELECT * FROM employees where Position = ?
     `
+
 	rows, err := repository.db.Query(sqlStatement, pos)
 	if err != nil { // scan will release the connection
 		log.Fatal("Error")
@@ -67,8 +71,12 @@ func (repository *MySqlRepository) EmployeeByPos(pos int) {
 	} else {
 		defer rows.Close()
 		for rows.Next() {
-			//e:= Employee{}
+			e := e.Employee{}
 
+			rows.Scan(&e.ID, &e.FullName, &e.Position, &e.Salary, &e.Joined, &e.OnProbation, &e.CreatedAt)
+			fmt.Println(e)
+			employees = append(employees, e)
 		}
 	}
+	return employees
 }
