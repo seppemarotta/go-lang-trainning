@@ -3,6 +3,7 @@ package apphandler
 import (
 	"chapter8/internal/employee"
 	"chapter8/internal/repository"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -16,13 +17,14 @@ type App struct {
 	Repository *repository.MySqlRepository
 }
 
-var AppInstance App
+var AppInstance *App
 
 func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	var response map[string]interface{}
 	json.Unmarshal([]byte(`{ "hello": "world" }`), &response)
 	respondWithJSON(w, http.StatusOK, response)
 }
+
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -36,7 +38,7 @@ func ReadEmployee(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	e := AppInstance.Repository.Get(parsedId)
+	e, err := AppInstance.Repository.Employee(context.Background(), parsedId)
 	fmt.Fprintf(w, "You've requested the employee: %s.\n", id)
 	json.NewEncoder(w).Encode(e)
 }
@@ -48,7 +50,7 @@ func ReadEmployeeByPos(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	e := AppInstance.Repository.EmployeeByPos(parsedId)
+	e, err := AppInstance.Repository.EmployeeByPos(parsedId)
 	fmt.Fprintf(w, "You've requested the employee: %s.\n", id)
 	json.NewEncoder(w).Encode(e)
 }
@@ -62,7 +64,7 @@ func CreateEmployee(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	AppInstance.Repository.Insert(e.FullName, int(e.Position), e.Salary, e.Joined, e.OnProbation)
+	AppInstance.Repository.Save(context.Background(), &e)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(e)
 }
@@ -88,14 +90,15 @@ func UpdateEmployee(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "You've requested the employee: %s.\n", id)
 }
 
-func Initialize() {
-	AppInstance.Repository = repository.InitRepo()
+func Initialize(rep *repository.MySqlRepository) (a *App) {
+	AppInstance.Repository = rep
 	AppInstance.Router = mux.NewRouter()
 	AppInstance.Router.HandleFunc("/", helloWorldHandler)
 	AppInstance.Router.HandleFunc("/employee/create", CreateEmployee).Methods("POST")
 	AppInstance.Router.HandleFunc("/employee/{ID}", ReadEmployee).Methods("GET")
 	AppInstance.Router.HandleFunc("/employee/byposition/{ID}", ReadEmployeeByPos).Methods("GET")
 	AppInstance.Router.HandleFunc("/employee/{ID}", UpdateEmployee).Methods("PUT")
+	return a
 }
 
 func Run() {

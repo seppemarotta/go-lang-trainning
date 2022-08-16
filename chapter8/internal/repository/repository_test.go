@@ -2,6 +2,7 @@ package repository
 
 import (
 	"chapter8/internal/employee"
+	"context"
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -52,24 +53,32 @@ func NewMock() (*sql.DB, sqlmock.Sqlmock, error) {
 func TestEmployee_GetId(t *testing.T) {
 	db, mock, _ := NewMock()
 	repo := &MySqlRepository{db}
-
+	ctx := context.Background()
 	query := regexp.QuoteMeta("SELECT * FROM employees WHERE id = ?")
-	prep := mock.ExpectPrepare(query)
 
-	prep.ExpectExec().WithArgs("1").WillReturnResult(sqlmock.NewResult(0, 1))
+	rows := sqlmock.NewRows([]string{"id", "full_name", "position", "salary", "joined", "on_probation", "created_at"}).
+		AddRow(e1.ID, e1.FullName, e1.Position, e1.Salary, e1.Joined, e1.OnProbation, e1.CreatedAt)
 
-	user := repo.Get(e1.ID)
+	mock.ExpectPrepare(query).ExpectQuery().WithArgs(1).WillReturnRows(rows)
+
+	user, err := repo.Employee(ctx, e1.ID)
 	assert.NotNil(t, user)
-	//assert.NoError(t, err)
-}
-func TestEmployee_Insert(t *testing.T) {
-	db, mock, _ := NewMock()
-	repo := &MySqlRepository{db}
-
-	query := regexp.QuoteMeta("INSERT INTO employees ( FullName, Position, Salary, Joined, OnProbation )\n        VALUES (?, ?, ?, ?, ?)")
-	prep := mock.ExpectPrepare(query)
-	prep.ExpectExec().WithArgs(e1.FullName, e1.Position, e1.Salary, e1.Joined, e1.OnProbation).WillReturnResult(sqlmock.NewResult(0, 1))
-	err := repo.Insert(e1.FullName, int(e1.Position), e1.Salary, e1.Joined, e1.OnProbation)
 	assert.NoError(t, err)
 
+}
+
+func TestEmployee_Insert(t *testing.T) {
+	db, mock, _ := NewMock()
+	ctx := context.Background()
+	repo := &MySqlRepository{db}
+
+	//query := regexp.QuoteMeta("INSERT INTO employees ( FullName, Position, Salary, Joined, OnProbation ) VALUES (?, ?, ?, ?, ?)")
+	query := regexp.QuoteMeta(`INSERT INTO employees ( FullName, Position, Salary, Joined, OnProbation ) VALUES (?, ?, ?, ?, ?) RETURNING employees.ID`)
+	//mock.ExpectBegin()
+	mock.ExpectPrepare(query).ExpectQuery().WithArgs(e1.FullName, e1.Position, e1.Salary, e1.Joined, e1.OnProbation).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectCommit()
+
+	err := repo.Save(ctx, &e1)
+
+	assert.NoError(t, err)
 }
