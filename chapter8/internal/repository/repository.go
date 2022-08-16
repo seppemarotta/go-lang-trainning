@@ -43,8 +43,7 @@ func (repository *MySqlRepository) Save(ctx context.Context, e *e.Employee) erro
 	sqlStatement := `INSERT INTO employees ( FullName, Position, Salary, Joined, OnProbation ) VALUES (?, ?, ?, ?, ?) RETURNING employees.ID`
 	_, err := repository.db.Exec(sqlStatement, e.FullName, e.Position, e.Salary, e.Joined, e.OnProbation)
 	if err != nil { // scan will release the connection
-		//log.Fatal("Error")
-		//log.Fatal(err.Error())
+		log.Fatal(err.Error())
 		return err
 	}
 	return nil
